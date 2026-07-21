@@ -54,15 +54,12 @@ jobs:
       run: |
         export PATH="/mingw64/bin:$PATH"
         cd build
-        windeployqt --release --no-translations AdaptixClient.exe
-        # OpenSSL
+        windeployqt --release --no-translations --force-openssl AdaptixClient.exe
         cp /mingw64/bin/libcrypto-3-x64.dll .
         cp /mingw64/bin/libssl-3-x64.dll .
-        # MinGW runtime libraries
         cp /mingw64/bin/libgcc_s_seh-1.dll .
         cp /mingw64/bin/libwinpthread-1.dll .
         cp /mingw64/bin/libstdc++-6.dll .
-        cp /mingw64/bin/libssp-0.dll .
 
     - name: Upload artifact
       uses: actions/upload-artifact@v5
