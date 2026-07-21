@@ -51,22 +51,34 @@ jobs:
         export PATH="/mingw64/bin:$PATH"
         cmake --build build --parallel $(nproc)
 
-    - name: Deploy with windeployqt and auto-copy all dependencies
+    - name: Deploy with windeployqt and copy all dependencies
       run: |
         export PATH="/mingw64/bin:$PATH"
         cd build
         windeployqt --release --no-translations --force-openssl AdaptixClient.exe
 
-        echo "Copying all required runtime DLLs using ntldd..."
-        ntldd -R AdaptixClient.exe | grep '=> /mingw64/bin/' | awk '{print $3}' | while read -r dll; do
+        # Attempt automatic dependency collection with ntldd (ignore errors)
+        echo "Attempting automatic DLL copy with ntldd..."
+        set +e
+        ntldd -R AdaptixClient.exe 2>/dev/null | grep '=> /mingw64/bin/' | awk '{print $3}' | while read -r dll; do
           if [ -f "$dll" ]; then
             cp -n "$dll" . 2>/dev/null || true
           fi
         done
+        set -e
 
-        # OpenSSL DLLs might be delay-loaded and missed by ntldd, copy explicitly
-        cp -n /mingw64/bin/libcrypto-3-x64.dll . 2>/dev/null || true
-        cp -n /mingw64/bin/libssl-3-x64.dll . 2>/dev/null || true
+        # Fallback: copy known critical runtime / library DLLs (will not overwrite existing)
+        echo "Copying known critical DLLs as safety net..."
+        for dll in libgcc_s_seh-1.dll libwinpthread-1.dll libstdc++-6.dll \
+                   libfreetype-6.dll libharfbuzz-0.dll libmd4c.dll libpng16-16.dll \
+                   libbz2-1.dll libbrotlidec.dll libbrotlicommon.dll libglib-2.0-0.dll \
+                   libintl-8.dll libiconv-2.dll libpcre2-8-0.dll libgraphite2.dll \
+                   libzstd.dll libdouble-conversion.dll libicuin74.dll libicuuc74.dll \
+                   libicudt74.dll libcrypto-3-x64.dll libssl-3-x64.dll; do
+          if [ -f "/mingw64/bin/$dll" ]; then
+            cp -n "/mingw64/bin/$dll" . 2>/dev/null || true
+          fi
+        done
 
         echo "All dependencies copied. DLL list:"
         ls *.dll
