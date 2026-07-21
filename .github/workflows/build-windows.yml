@@ -1,4 +1,4 @@
-name: Build Windows Client
+name: Build Windows Client (MSYS2)
 
 on:
   workflow_dispatch:
@@ -8,44 +8,51 @@ on:
 jobs:
   build:
     runs-on: windows-latest
+    defaults:
+      run:
+        shell: msys2 {0}          # All steps use MSYS2 shell by default
 
     steps:
+    - name: Setup MSYS2
+      uses: msys2/setup-msys2@v2
+      with:
+        msystem: UCRT64            # Use UCRT64 environment as per official doc
+        update: true
+        install: >-
+          base-devel
+          mingw-w64-x86_64-toolchain
+          mingw-w64-x86_64-cmake
+          mingw-w64-x86_64-qt6
+          mingw-w64-x86_64-openssl
+          git
+
     - name: Checkout code with submodules
       uses: actions/checkout@v5
       with:
         submodules: recursive
 
-    - name: Install Qt 6.5.3
-      uses: jurplel/install-qt-action@v4
-      with:
-        version: '6.5.3'
-        host: 'windows'
-        target: 'desktop'
-        arch: 'win64_msvc2022_64'
-        cache: 'true'
-
-    - name: Install OpenSSL
-      run: |
-        choco install openssl --version=3.2.0 -y
-        echo "$env:ProgramFiles\OpenSSL-Win64\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
-
     - name: Configure CMake
       run: |
         mkdir build
         cd build
-        cmake .. -G "Visual Studio 17 2022" -A x64 -DCMAKE_PREFIX_PATH="${{ env.QT6_DIR }}"
+        cmake .. -G "MinGW Makefiles" -DCMAKE_BUILD_TYPE=Release
 
     - name: Build
-      run: cmake --build build --config Release --parallel $env:NUMBER_OF_PROCESSORS
+      run: cmake --build build --parallel $(nproc)
 
-    - name: Deploy with windeployqt and copy OpenSSL DLLs
+    - name: Deploy with windeployqt
       run: |
-        windeployqt --release --no-translations build/Release/AdaptixClient.exe
-        copy "C:\Program Files\OpenSSL-Win64\bin\libcrypto-3-x64.dll" build\Release\
-        copy "C:\Program Files\OpenSSL-Win64\bin\libssl-3-x64.dll" build\Release\
+        cd build
+        windeployqt --release --no-translations AdaptixClient.exe
+        # OpenSSL DLLs are already in MSYS2's /mingw64/bin, windeployqt may pick them
+        # If not, copy manually:
+        cp /mingw64/bin/libcrypto-3-x64.dll .
+        cp /mingw64/bin/libssl-3-x64.dll .
 
     - name: Upload artifact
       uses: actions/upload-artifact@v5
       with:
         name: AdaptixClient-Windows
-        path: build/Release/
+        path: build/AdaptixClient.exe
+        # Additional DLLs are in the same folder, so the whole folder is better
+        path: build/
