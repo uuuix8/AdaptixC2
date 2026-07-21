@@ -15,17 +15,14 @@ jobs:
       with:
         submodules: recursive
 
-    - name: Install Qt 6.5.3 (with fallback aqt version)
+    - name: Install Qt 6.5.3
       uses: jurplel/install-qt-action@v4
       with:
         version: '6.5.3'
         host: 'windows'
         target: 'desktop'
         arch: 'win64_msvc2022_64'
-        modules: 'qt5compat'
-        aqtversion: '==3.1.*'        # Pin aqtinstall to stable v3.1
-        cache: true                  # Speed up future runs
-        setup-python: 'true'         # Let the action manage Python for aqt
+        cache: 'true'
 
     - name: Install OpenSSL
       run: |
