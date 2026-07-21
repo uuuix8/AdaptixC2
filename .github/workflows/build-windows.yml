@@ -31,12 +31,19 @@ jobs:
       with:
         submodules: recursive
 
+    - name: Debug - List root and AdaptixClient
+      run: |
+        echo "Workspace: $GITHUB_WORKSPACE"
+        ls -la
+        echo "--- AdaptixClient ---"
+        ls -la AdaptixClient
+
     - name: Configure CMake
       run: |
         export PATH="/mingw64/bin:$PATH"
-        mkdir build
+        mkdir -p build
         cd build
-        cmake .. -G "MinGW Makefiles" -DCMAKE_BUILD_TYPE=Release
+        cmake "$GITHUB_WORKSPACE/AdaptixClient" -G "MinGW Makefiles" -DCMAKE_BUILD_TYPE=Release
 
     - name: Build
       run: |
@@ -47,6 +54,10 @@ jobs:
       run: |
         export PATH="/mingw64/bin:$PATH"
         cd build
+        # Check what was actually built
+        ls -la *.exe || echo "No exe found, listing all files:"
+        find . -name "*.exe"
+        # AdaptixClient should be at ./AdaptixClient.exe or similar, adjust if needed
         windeployqt --release --no-translations AdaptixClient.exe
         cp /mingw64/bin/libcrypto-3-x64.dll .
         cp /mingw64/bin/libssl-3-x64.dll .
