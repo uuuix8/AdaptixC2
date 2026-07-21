@@ -1,8 +1,8 @@
 name: Build Windows Client
 
 on:
-  workflow_dispatch:        # Manual trigger
-  push:                     # Optional: auto-build on push, remove if not needed
+  workflow_dispatch:
+  push:
     branches: [ main ]
 
 jobs:
@@ -11,18 +11,21 @@ jobs:
 
     steps:
     - name: Checkout code with submodules
-      uses: actions/checkout@v4
+      uses: actions/checkout@v5
       with:
         submodules: recursive
 
-    - name: Install Qt 6.5.3
+    - name: Install Qt 6.5.3 (with fallback aqt version)
       uses: jurplel/install-qt-action@v4
       with:
         version: '6.5.3'
         host: 'windows'
         target: 'desktop'
         arch: 'win64_msvc2022_64'
-        modules: 'qt5compat'          # Compatibility module if required
+        modules: 'qt5compat'
+        aqtversion: '==3.1.*'        # Pin aqtinstall to stable v3.1
+        cache: true                  # Speed up future runs
+        setup-python: 'true'         # Let the action manage Python for aqt
 
     - name: Install OpenSSL
       run: |
@@ -45,7 +48,7 @@ jobs:
         copy "C:\Program Files\OpenSSL-Win64\bin\libssl-3-x64.dll" build\Release\
 
     - name: Upload artifact
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v5
       with:
         name: AdaptixClient-Windows
         path: build/Release/
