@@ -10,13 +10,13 @@ jobs:
     runs-on: windows-latest
     defaults:
       run:
-        shell: msys2 {0}          # All steps use MSYS2 shell by default
+        shell: msys2 {0}
 
     steps:
     - name: Setup MSYS2
       uses: msys2/setup-msys2@v2
       with:
-        msystem: UCRT64            # Use UCRT64 environment as per official doc
+        msystem: UCRT64
         update: true
         install: >-
           base-devel
@@ -44,8 +44,6 @@ jobs:
       run: |
         cd build
         windeployqt --release --no-translations AdaptixClient.exe
-        # OpenSSL DLLs are already in MSYS2's /mingw64/bin, windeployqt may pick them
-        # If not, copy manually:
         cp /mingw64/bin/libcrypto-3-x64.dll .
         cp /mingw64/bin/libssl-3-x64.dll .
 
@@ -53,6 +51,4 @@ jobs:
       uses: actions/upload-artifact@v5
       with:
         name: AdaptixClient-Windows
-        path: build/AdaptixClient.exe
-        # Additional DLLs are in the same folder, so the whole folder is better
         path: build/
