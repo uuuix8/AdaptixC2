@@ -24,6 +24,7 @@ jobs:
           mingw-w64-x86_64-cmake
           mingw-w64-x86_64-qt6
           mingw-w64-x86_64-openssl
+          mingw-w64-x86_64-ldd
           git
 
     - name: Checkout code with submodules
@@ -50,16 +51,26 @@ jobs:
         export PATH="/mingw64/bin:$PATH"
         cmake --build build --parallel $(nproc)
 
-    - name: Deploy with windeployqt and copy runtime DLLs
+    - name: Deploy with windeployqt and auto-copy all dependencies
       run: |
         export PATH="/mingw64/bin:$PATH"
         cd build
         windeployqt --release --no-translations --force-openssl AdaptixClient.exe
-        cp /mingw64/bin/libcrypto-3-x64.dll .
-        cp /mingw64/bin/libssl-3-x64.dll .
-        cp /mingw64/bin/libgcc_s_seh-1.dll .
-        cp /mingw64/bin/libwinpthread-1.dll .
-        cp /mingw64/bin/libstdc++-6.dll .
+
+        # Use ldd to find all non-system DLL dependencies and copy them
+        echo "Copying all required runtime DLLs..."
+        ldd AdaptixClient.exe | grep '=> /mingw64/bin/' | awk '{print $3}' | while read -r dll; do
+          if [ -f "$dll" ]; then
+            cp -n "$dll" . 2>/dev/null || true
+          fi
+        done
+
+        # Also copy OpenSSL explicitly (in case not caught by ldd due to delayed load)
+        cp -n /mingw64/bin/libcrypto-3-x64.dll . 2>/dev/null || true
+        cp -n /mingw64/bin/libssl-3-x64.dll . 2>/dev/null || true
+
+        echo "Done. Contents of build:"
+        ls -la *.dll
 
     - name: Upload artifact
       uses: actions/upload-artifact@v5
