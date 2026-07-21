@@ -33,15 +33,19 @@ jobs:
 
     - name: Configure CMake
       run: |
+        export PATH="/mingw64/bin:$PATH"
         mkdir build
         cd build
         cmake .. -G "MinGW Makefiles" -DCMAKE_BUILD_TYPE=Release
 
     - name: Build
-      run: cmake --build build --parallel $(nproc)
+      run: |
+        export PATH="/mingw64/bin:$PATH"
+        cmake --build build --parallel $(nproc)
 
     - name: Deploy with windeployqt
       run: |
+        export PATH="/mingw64/bin:$PATH"
         cd build
         windeployqt --release --no-translations AdaptixClient.exe
         cp /mingw64/bin/libcrypto-3-x64.dll .
