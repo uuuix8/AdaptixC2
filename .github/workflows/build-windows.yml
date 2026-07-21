@@ -1,4 +1,4 @@
-name: Build Windows Client (MSYS2)
+name: Build Windows Client (MSYS2) - Full DLL Pack
 
 on:
   workflow_dispatch:
@@ -24,7 +24,6 @@ jobs:
           mingw-w64-x86_64-cmake
           mingw-w64-x86_64-qt6
           mingw-w64-x86_64-openssl
-          mingw-w64-x86_64-ntldd
           git
 
     - name: Checkout code with submodules
@@ -51,40 +50,22 @@ jobs:
         export PATH="/mingw64/bin:$PATH"
         cmake --build build --parallel $(nproc)
 
-    - name: Deploy with windeployqt and copy all dependencies
+    - name: Deploy and dump ALL DLLs
       run: |
         export PATH="/mingw64/bin:$PATH"
         cd build
         windeployqt --release --no-translations --force-openssl AdaptixClient.exe
 
-        # Attempt automatic dependency collection with ntldd (ignore errors)
-        echo "Attempting automatic DLL copy with ntldd..."
+        echo "Brute force copying ALL DLLs from /mingw64/bin/..."
         set +e
-        ntldd -R AdaptixClient.exe 2>/dev/null | grep '=> /mingw64/bin/' | awk '{print $3}' | while read -r dll; do
-          if [ -f "$dll" ]; then
-            cp -n "$dll" . 2>/dev/null || true
-          fi
-        done
+        cp -n /mingw64/bin/*.dll . 2>/dev/null || true
         set -e
 
-        # Fallback: copy known critical runtime / library DLLs (will not overwrite existing)
-        echo "Copying known critical DLLs as safety net..."
-        for dll in libgcc_s_seh-1.dll libwinpthread-1.dll libstdc++-6.dll \
-                   libfreetype-6.dll libharfbuzz-0.dll libmd4c.dll libpng16-16.dll \
-                   libbz2-1.dll libbrotlidec.dll libbrotlicommon.dll libglib-2.0-0.dll \
-                   libintl-8.dll libiconv-2.dll libpcre2-8-0.dll libgraphite2.dll \
-                   libzstd.dll libdouble-conversion.dll libicuin74.dll libicuuc74.dll \
-                   libicudt74.dll libcrypto-3-x64.dll libssl-3-x64.dll; do
-          if [ -f "/mingw64/bin/$dll" ]; then
-            cp -n "/mingw64/bin/$dll" . 2>/dev/null || true
-          fi
-        done
-
-        echo "All dependencies copied. DLL list:"
-        ls *.dll
+        echo "DLL dump complete. Total files in build:"
+        ls -1 *.dll | wc -l
 
     - name: Upload artifact
       uses: actions/upload-artifact@v5
       with:
-        name: AdaptixClient-Windows
+        name: AdaptixClient-Windows-Full
         path: build/
